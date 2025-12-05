@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Invoice details
+  amount        String   // Store as string to handle large numbers
+  tokenAddress  String   // Token contract address or SPL mint address
+  tokenSymbol   String   // e.g., "SOL", "USDC", "ETH"
+  tokenDecimals Int      @default(18)
+  chain         String   // "base" or "solana"
+  destinationChain String // Where the payment should be received
+
+  // Parties
+  recipientAddress String // Base address or Solana pubkey
+  payerAddress     String? // Optional, filled when payment is made
+  creatorAddress   String  // Who created the invoice
+
+  // Status
+  status          String   @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
+  paidAt          DateTime?
+  bridgeTxHash    String? // Bridge transaction hash
+  bridgeDirection String? // "base-to-solana" or "solana-to-base"
+
+  // Metadata
+  description     String?
+  dueDate         DateTime?
+  notes           String?
+
+  // Subscription
+  subscriptionId  String?
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  // Payments
+  payments        Payment[]
+
+  @@index([recipientAddress])
+  @@index([creatorAddress])
+  @@index([status])
+  @@index([subscriptionId])
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Subscription details
+  name          String
+  amount        String
+  tokenAddress  String
+  tokenSymbol   String
+  tokenDecimals Int      @default(18)
+  chain         String   // "base" or "solana"
+  destinationChain String
+
+  // Parties
+  recipientAddress String
+  payerAddress     String
+  creatorAddress   String
+
+  // Schedule
+  frequency     String   @default("MONTHLY") // DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  nextBillingDate DateTime
+  lastBillingDate  DateTime?
+
+  // Status
+  status        String   @default("ACTIVE") // ACTIVE, PAUSED, CANCELLED, EXPIRED
+  cancelledAt   DateTime?
+
+  // Metadata
+  description   String?
+
+  // Invoices
+  invoices      Invoice[]
+
+  @@index([recipientAddress])
+  @@index([payerAddress])
+  @@index([status])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  invoiceId     String
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  // Payment details
+  amount        String
+  tokenAddress  String
+  tokenSymbol   String
+  chain         String
+
+  // Transaction info
+  txHash        String
+  bridgeTxHash  String?
+  bridgeDirection String?
+
+  // Status
+  status        String   @default("PENDING") // PENDING, CONFIRMED, FAILED
+  confirmedAt   DateTime?
+
+  @@index([invoiceId])
+  @@index([txHash])
+}
+
