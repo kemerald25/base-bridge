@@ -147,4 +147,3 @@ export function useBridgePayment(params: UseBridgePaymentParams) {
     error: error || (writeError ? writeError.message : null),
   };
 }
-

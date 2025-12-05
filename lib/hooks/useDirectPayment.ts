@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useSendTransaction } from 'wagmi';
 import { parseUnits, Address, encodeFunctionData } from 'viem';
 
@@ -77,14 +77,19 @@ export function useDirectPayment(params: UseDirectPaymentParams) {
   };
 
   // Update processing state when transaction completes
-  if (isSuccess && isProcessing) {
-    setIsProcessing(false);
-  }
+  useEffect(() => {
+    if (isSuccess && isProcessing) {
+      setIsProcessing(false);
+    }
+  }, [isSuccess, isProcessing]);
 
-  if (writeError) {
-    setError(writeError.message);
-    setIsProcessing(false);
-  }
+  // Handle write errors
+  useEffect(() => {
+    if (writeError) {
+      setError(writeError.message);
+      setIsProcessing(false);
+    }
+  }, [writeError]);
 
   return {
     executePayment,
